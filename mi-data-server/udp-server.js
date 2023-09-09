@@ -31,16 +31,16 @@ server.on('message', (message, remoteInfo) => {
 
         if (latitudPart && longitudPart) {
             // Extraer la latitud y longitud de las partes correspondientes
-            const latitud = latitudPart.split(':')[1].trim();
-            const longitud = longitudPart.split(':')[1].trim();
+            const latitude = latitudPart.split(':')[1].trim();
+            const longitude = longitudPart.split(':')[1].trim();
 
             // Obtener la fecha y hora actual en el formato requerido
-            const fechaHora = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const time_stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
             // Consulta SQL para insertar los datos en la base de datos
             const query = 'INSERT INTO ubicaciones (latitud, longitud, fechaHora) VALUES (?, ?, ?)';
             // Ejecutar la consulta con los valores correspondientes
-            connection.query(query, [latitud, longitud, fechaHora], (error, results) => {
+            connection.query(query, [latitude, longitude, time_stamp], (error, results) => {
                 if (error) {
                     console.error('Error al almacenar datos en la base de datos:', error);
                 } else {

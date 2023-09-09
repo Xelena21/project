@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,26 +56,29 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Recepción de Datos de GPS</h1>
     <div class="container">
         <p id="latitud"><strong>Latitud:</strong> Cargando...</p>
         <p id="longitud"><strong>Longitud:</strong> Cargando...</p>
         <p id="fechaHora"><strong>Fecha y Hora:</strong> Cargando...</p>
-        
+
         <!-- Agrega un contenedor para el mapa Leaflet -->
         <div id="map"></div>
-        
+
         <!-- Agrega un botón para centrar el mapa en la ubicación actual -->
         <button id="centerMapButton">Centrar en mi Ubicación</button>
     </div>
 
     <!-- Incluye el script de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    
+
     <script>
         // Variable para almacenar la última ubicación conocida
         var lastKnownLocation = null;
+
+
 
         // Función para calcular la distancia entre dos puntos geográficos (fórmula haversine)
         function calcularDistancia(lat1, lon1, lat2, lon2) {
@@ -101,11 +105,13 @@
 
             // Actualiza el marcador en el mapa Leaflet
             marker.setLatLng([latitud, longitud]);
+            map.setView([latitud, longitud], 13);
+            polyline.addLatLng([latitud, longitud]);
         }
 
         // Configura el mapa Leaflet
         var map = L.map('map').setView([0, 0], 13);
-
+        var polyline = L.polyline([], { color: 'blue' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
@@ -126,12 +132,12 @@
                         calcularDistancia(lastKnownLocation.lat, lastKnownLocation.lng, latitud, longitud) > 0.01
                     ) {
                         lastKnownLocation = { lat: latitud, lng: longitud };
-                        
+
                         actualizarUbicacion(latitud, longitud, fechaHora);
 
                         map.setView([latitud, longitud], 13);
                     }
-                }, function(error) {
+                }, function (error) {
                     console.error('Error al obtener la ubicación:', error);
                 }, {
                     enableHighAccuracy: true,
@@ -143,42 +149,54 @@
             }
         }
 
-        document.getElementById("centerMapButton").addEventListener("click", obtenerUbicacionUsuario);
+        document.getElementById("centerMapButton").addEventListener("click", fetchUbicacionUltima);
 
-        // Función para recibir datos del servidor HTTPS externo
-        function recibirDatosDelServidor() {
-            // URL del servidor HTTPS que proporciona los datos (ajusta la URL)
-            const serverUrl = 'https://3.128.221.159:3000';
+        //Función que trae el ultimo dato de la db
+        async function fetchUbicacionUltima() {
+            try {
+                const response = await fetch('/api/ubicaciones/ultimo');
 
-            // Realiza una solicitud GET al servidor
-            fetch(serverUrl)
-                .then(response => response.json())
-                .then(data => {
-                    // Actualiza la interfaz con los datos recibidos del servidor
-                    actualizarInterfazConDatosDelServidor(data);
-                })
-                .catch(error => {
-                    console.error('Error al recibir datos del servidor:', error);
+                if (!response.ok) {
+                    throw new Error('Error al obtener la ubicación más reciente');
+                }
+
+                const data = await response.json();
+                const { latitude, longitude, time_stamp } = data;
+
+                // Crear un objeto Date a partir del timestamp y establecer la zona horaria explícitamente
+                const date = new Date(time_stamp);
+                date.setUTCHours(date.getUTCHours() - 5); // Ajustar a GMT-5 (Bogotá)
+
+                // Formatear la fecha y hora en el formato deseado (incluyendo la fecha)
+                const formattedDate = date.toLocaleString('es-CO', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour12: true, // Usar formato de 12 horas (AM/PM)
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
+
+                actualizarUbicacion(latitude, longitude, formattedDate);
+            } catch (error) {
+                console.error('Error al obtener la ubicación más reciente:', error);
+                // Maneja el error aquí si es necesario
+            }
         }
 
-        // Llama a la función para recibir datos del servidor
-        recibirDatosDelServidor();
-        
-        // Función para actualizar la interfaz con los datos recibidos del servidor
-        function actualizarInterfazConDatosDelServidor(data) {
-            // Actualiza la interfaz con los datos recibidos del servidor
-            // Por ejemplo, puedes mostrarlos en una tabla HTML o de la manera que desees
-            console.log('Datos recibidos del servidor:', data);
-        }
+
+
+
 
         // Función para obtener y actualizar la ubicación cada 5 segundos
         function obtenerYActualizarUbicacion() {
-            obtenerUbicacionUsuario();
+            fetchUbicacionUltima();
             setTimeout(obtenerYActualizarUbicacion, 5000);
         }
 
         obtenerYActualizarUbicacion();
     </script>
 </body>
+
 </html>

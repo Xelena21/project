@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,23 +55,24 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Recepción de Datos de GPS</h1>
     <div class="container">
         <p id="latitud"><strong>Latitud:</strong> Cargando...</p>
         <p id="longitud"><strong>Longitud:</strong> Cargando...</p>
         <p id="fechaHora"><strong>Fecha y Hora:</strong> Cargando...</p>
-        
+
         <!-- Agrega un contenedor para el mapa Leaflet -->
         <div id="map"></div>
-        
+
         <!-- Agrega un botón para centrar el mapa en la ubicación actual -->
         <button id="centerMapButton">Centrar en mi Ubicación</button>
     </div>
 
     <!-- Incluye el script de Leaflet a través de HTTPS -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    
+
     <script>
         // Variable para almacenar la última ubicación conocida
         var lastKnownLocation = null;
@@ -113,7 +115,7 @@
         var marker = L.marker([0, 0]).addTo(map);
 
         // Función para obtener la ubicación del usuario y actualizar si hay cambios significativos
-        function obtenerUbicacionUsuario() {
+        /* function obtenerUbicacionUsuario() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.watchPosition(function (position) {
                     var latitud = position.coords.latitude;
@@ -128,7 +130,7 @@
                         actualizarUbicacion(latitud, longitud, fechaHora);
                         map.setView([latitud, longitud], 13);
                     }
-                }, function(error) {
+                }, function (error) {
                     console.error('Error al obtener la ubicación:', error);
                 }, {
                     enableHighAccuracy: true,
@@ -138,16 +140,39 @@
             } else {
                 console.log("Geolocalización no está disponible en este navegador.");
             }
+        } */
+
+        document.getElementById("centerMapButton").addEventListener("click", fetchUbicacionUltima);
+
+        //Función que trae el ultimo dato de la db
+        function fetchUbicacionUltima() {
+            fetch('/api/ubicaciones/ultimo')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al obtener la ubicación más reciente');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const { latitude, longitude, time_stamp } = data;
+                    actualizarUbicacion(latitude, longitude, time_stamp);
+                })
+                .catch(error => {
+                    console.error('Error al obtener la ubicación más reciente:', error);
+                    // Maneja el error aquí si es necesario
+                });
         }
 
-        document.getElementById("centerMapButton").addEventListener("click", obtenerUbicacionUsuario);
 
         function obtenerYActualizarUbicacion() {
-            obtenerUbicacionUsuario();
+            //obtenerUbicacionUsuario();
+            // Llama a la función para obtener la ubicación más reciente y actualizar los elementos HTML y el marcador
+            fetchUbicacionUltima();
             setTimeout(obtenerYActualizarUbicacion, 5000);
         }
 
         obtenerYActualizarUbicacion();
     </script>
 </body>
+
 </html>

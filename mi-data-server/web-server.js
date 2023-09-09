@@ -49,6 +49,23 @@ app.get('/api/ubicaciones', async (req, res) => {
         res.status(500).json({ message: 'Error en el servidor' });
     }
 });
+app.get('/api/ubicaciones/ultimo', async (req, res) => {
+    try {
+        const connection = await connectToDB();
+        const [rows, fields] = await connection.execute('SELECT * FROM ubicaciones ORDER BY id DESC LIMIT 1');
+        console.log('Último dato obtenido de la base de datos:', rows[0]);
+        connection.end();
+
+        if (rows.length > 0) {
+            res.status(200).json(rows[0]);
+        } else {
+            res.status(404).json({ message: 'No se encontraron registros' });
+        }
+    } catch (error) {
+        console.error('Error al obtener el último dato:', error);
+        res.status(500).json({ message: 'Error en el servidor' });
+    }
+});
 
 const webServerPort = 3000;
 httpServer.listen(webServerPort, () => {
