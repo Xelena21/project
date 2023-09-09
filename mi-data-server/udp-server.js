@@ -38,7 +38,7 @@ server.on('message', (message, remoteInfo) => {
             const time_stamp = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
             // Consulta SQL para insertar los datos en la base de datos
-            const query = 'INSERT INTO ubicaciones (latitud, longitud, fechaHora) VALUES (?, ?, ?)';
+            const query = 'INSERT INTO ubicaciones (latitude, longitude, time_stamp) VALUES (?, ?, ?)';
             // Ejecutar la consulta con los valores correspondientes
             connection.query(query, [latitude, longitude, time_stamp], (error, results) => {
                 if (error) {
@@ -56,4 +56,4 @@ server.on('message', (message, remoteInfo) => {
 });
 
 // Enlazar el servidor al puerto 3001
-server.bind(3000);
+server.bind(3010);
