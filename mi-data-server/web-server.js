@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const mysql = require('mysql2/promise');
+const exec = require('child_process').exec;
+
 
 const connectionOptions = {
     host: 'database-1.c3u4cniuznve.us-east-2.rds.amazonaws.com', // Dirección del servidor MySQL
@@ -9,7 +11,7 @@ const connectionOptions = {
     password: 'xelena20012001', // Contraseña del usuario
     database: 'database-1'  // Nombre de la base de datos
 };
-
+const WEBHOOK_SECRET = 'xelena20012001';  // Asegúrate de cambiar esto por un valor seguro y aleatorio.
 const app = express();
 const httpServer = http.createServer(app);
 const io = socketIo(httpServer);
@@ -66,6 +68,28 @@ app.get('/api/ubicaciones/ultimo', async (req, res) => {
         res.status(500).json({ message: 'Error en el servidor' });
     }
 });
+
+app.post('/webhook', express.json(), (req, res) => {
+    const crypto = require('crypto');
+
+
+    let expectedSignature = "sha256=" + crypto.createHmac('sha256', WEBHOOK_SECRET).update(JSON.stringify(req.body)).digest('hex');
+
+    if (req.headers['x-hub-signature-256'] !== expectedSignature) {
+        console.error('Firma no coincide. Posible intento de ataque.');
+        return res.status(403).send('Signature mismatch');
+    }
+
+    exec('cd /home/ubuntu/diseño/project && git pull && pm2 restart 0 && pm2 restart 1 ', (error, stdout, stderr) => {
+        if (error) {
+            console.error(`Error ejecutando el comando: ${error}`);
+            return res.status(500).send('Server Internal Error');
+        }
+        console.log(`Resultado del comando: ${stdout}`);
+        return res.status(200).send('Deployed!');
+    });
+});
+
 
 const webServerPort = 3000;
 httpServer.listen(webServerPort, () => {
