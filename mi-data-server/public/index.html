@@ -165,7 +165,7 @@
 
                 // Crear un objeto Date a partir del timestamp y establecer la zona horaria explícitamente
                 const date = new Date(time_stamp);
-                date.setUTCHours(date.getUTCHours() ); // Ajustar a GMT-5 (Bogotá)
+                date.setUTCHours(date.getUTCHours() - 5); // Ajustar a GMT-5 (Bogotá)
 
                 // Formatear la fecha y hora en el formato deseado (incluyendo la fecha)
                 const formattedDate = date.toLocaleString('es-CO', {
