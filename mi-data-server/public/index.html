@@ -77,6 +77,8 @@
     <script>
         // Variable para almacenar la última ubicación conocida
         var lastKnownLocation = null;
+        var lastLatitude;
+        var lastLongitude;
 
 
 
@@ -149,7 +151,10 @@
             }
         }
 
-        document.getElementById("centerMapButton").addEventListener("click", fetchUbicacionUltima);
+        document.getElementById("centerMapButton").addEventListener("click", function () {
+            centerMap(lastLatitude, lastLongitude);
+        });
+
 
         //Función que trae el ultimo dato de la db
         async function fetchUbicacionUltima() {
@@ -162,6 +167,8 @@
 
                 const data = await response.json();
                 const { latitude, longitude, time_stamp } = data;
+                lastLatitude = latitude;
+                lastLongitude = longitude;
 
                 // Crear un objeto Date a partir del timestamp y establecer la zona horaria explícitamente
                 const date = new Date(time_stamp);
@@ -185,6 +192,32 @@
             }
         }
 
+        function centerMap(latitude, longitude) {
+            map.setView([latitude, longitude], 13);
+        }
+
+        // Función para obtener la ubicación más reciente y centrar el mapa
+        async function fetchAndCenterMap() {
+            try {
+                const response = await fetch('/api/ubicaciones/ultimo');
+
+                if (!response.ok) {
+                    throw new Error('Error al obtener la ubicación más reciente');
+                }
+
+                const data = await response.json();
+                const { latitude, longitude } = data;
+                console.log(latitude, longitude)
+                lastLatitude = latitude;
+                lastLongitude = longitude;
+                // Centra el mapa en las coordenadas obtenidas
+                centerMap(latitude, longitude);
+            } catch (error) {
+                console.error('Error al obtener la ubicación más reciente:', error);
+                // Maneja el error aquí si es necesario
+            }
+        }
+
 
 
 
@@ -196,6 +229,9 @@
         }
 
         obtenerYActualizarUbicacion();
+
+        // Ejecuta la función cuando la página se carga completamente
+        window.addEventListener('load', fetchAndCenterMap);
     </script>
 </body>
 
