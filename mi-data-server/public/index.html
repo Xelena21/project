@@ -7,43 +7,31 @@
     <title>Recepción de Datos GPS</title>
     <!-- Incluye las hojas de estilo de Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css"/>
+    <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-    <h1>Recepción de Datos de GPS</h1>
+    <h1>RECEPCIÓN DE DATOS GPS</h1>
     <div class="container">
-        <p id="latitud"><strong>Latitud:</strong> Cargando...</p>
-        <p id="longitud"><strong>Longitud:</strong> Cargando...</p>
-        <p id="fechaHora"><strong>Fecha y Hora:</strong> Cargando...</p>
+        <div class="information">
+            <strong>Latitud:</strong>
+            <p id="latitud">Cargando...</p>
+            <strong>Longitud:</strong>
+            <p id="longitud">Cargando...</p>
+            <strong>Fecha y Hora:</strong>
+            <p id="fechaHora">Cargando...</p>
+        </div>
+
 
         <!-- Agrega un contenedor para el mapa Leaflet -->
         <div id="map"></div>
 
         <!-- Agrega un botón para centrar el mapa en la ubicación actual -->
-        <button id="centerMapButton">Centrar en mi Ubicación</button>
-    </div>
-    
-        <!-- Calendario -->
-        <label for="fechaInput">Selecciona una fecha:</label>
-        <input type="date" id="fechaInput">
-
-        <!-- Contenedor de la tabla -->
-        <div id="infoTableContainer">
-            <!-- Tabla para mostrar la información -->
-            <table id="infoTable">
-                <thead>
-                    <tr>
-                        <th>Latitud</th>
-                        <th>Longitud</th>
-                        <th>Fecha y Hora</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Aquí se llenará dinámicamente con JavaScript -->
-                </tbody>
-            </table>
+        <div class="botones"><button class="centerMapButton" id="centerMapButton">CENTRAR MARCADOR</button>
+            <a href="historicos.html"><button class="centerMapButton">CONSULTA DE HISTORICOS</button></a>
         </div>
+
+    </div>
     </div>
     <!-- Incluye el script de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
@@ -75,9 +63,9 @@
         // Función para actualizar la ubicación en tiempo real
         function actualizarUbicacion(latitud, longitud, fechaHora) {
             // Actualiza los elementos HTML con los datos recibidos
-            document.getElementById("latitud").innerText = `Latitud: ${latitud}`;
-            document.getElementById("longitud").innerText = `Longitud: ${longitud}`;
-            document.getElementById("fechaHora").innerText = `Fecha y Hora: ${fechaHora}`;
+            document.getElementById("latitud").innerText = `${latitud}`;
+            document.getElementById("longitud").innerText = `${longitud}`;
+            document.getElementById("fechaHora").innerText = `${fechaHora}`;
 
             // Actualiza el marcador en el mapa Leaflet
             marker.setLatLng([latitud, longitud]);
@@ -208,67 +196,72 @@
         // Ejecuta la función cuando la página se carga completamente
         window.addEventListener('load', fetchAndCenterMap);
 
-    // Función para buscar en la base de datos por fecha y hora
-    async function buscarEnBaseDeDatos() {
-        const fechaInput = document.getElementById('fechaInput').value;
-        const formattedDate = new Date(fechaInput).toISOString();
+        async function buscarEnBaseDeDatos() {
+            const fechaInput = document.getElementById('fechaInput').value;
+            const formattedDate = new Date(fechaInput).toISOString();
 
-        try {
-            const response = await fetch(`/api/ubicaciones?fecha=${formattedDate}`);
-            if (!response.ok) {
-                throw new Error('Error al buscar en la base de datos');
+            try {
+                const response = await fetch(`/api/ubicaciones/por-fecha?fecha=${formattedDate}`);
+                if (!response.ok) {
+                    throw new Error('Error en la solicitud');
+                }
+
+                const data = await response.json();
+                if (data.message) {
+                    throw new Error(data.message);
+                }
+
+                mostrarInformacionEnTabla(data);
+                trazarPolilinea(data);
+            } catch (error) {
+                console.error('Error al buscar en la base de datos:', error.message);
+                // Aquí puedes manejar el error de acuerdo a tus necesidades, por ejemplo, mostrar un mensaje al usuario
             }
-
-            const data = await response.json();
-            mostrarInformacionEnTabla(data);
-            trazarPolilinea(data);
-        } catch (error) {
-            console.error('Error al buscar en la base de datos:', error);
         }
-    }
 
-    function mostrarInformacionEnTabla(data) {
-        const tableBody = document.querySelector('#infoTable tbody');
-        tableBody.innerHTML = '';
 
-        data.forEach((item) => {
-            const row = tableBody.insertRow();
-            const cell1 = row.insertCell(0);
-            const cell2 = row.insertCell(1);
-            const cell3 = row.insertCell(2);
+        function mostrarInformacionEnTabla(data) {
+            const tableBody = document.querySelector('#infoTable tbody');
+            tableBody.innerHTML = '';
 
-            cell1.textContent = item.latitude;
-            cell2.textContent = item.longitude;
+            data.forEach((item) => {
+                const row = tableBody.insertRow();
+                const cell1 = row.insertCell(0);
+                const cell2 = row.insertCell(1);
+                const cell3 = row.insertCell(2);
 
-            // Convertir la hora a la zona horaria de Bogotá (GMT-5)
-            const dateUTC = new Date(item.time_stamp);
-            const dateBogota = new Date(dateUTC);
-            dateBogota.setUTCHours(dateBogota.getUTCHours() - 5); // Ajustar a GMT-5 (Bogotá)
+                cell1.textContent = item.latitude;
+                cell2.textContent = item.longitude;
 
-            // Formatear la fecha y hora en el formato deseado (incluyendo la fecha)
-            const formattedDate = dateBogota.toLocaleString('es-CO', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour12: true, // Usar formato de 12 horas (AM/PM)
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
+                // Convertir la hora a la zona horaria de Bogotá (GMT-5)
+                const dateUTC = new Date(item.time_stamp);
+                const dateBogota = new Date(dateUTC);
+                dateBogota.setUTCHours(dateBogota.getUTCHours() - 5); // Ajustar a GMT-5 (Bogotá)
+
+                // Formatear la fecha y hora en el formato deseado (incluyendo la fecha)
+                const formattedDate = dateBogota.toLocaleString('es-CO', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour12: true, // Usar formato de 12 horas (AM/PM)
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                cell3.textContent = formattedDate;
             });
+        }
 
-            cell3.textContent = formattedDate;
-        });
-    }
+        // Función para trazar la polilínea en el mapa
+        function trazarPolilinea(data) {
+            const coordinates = data.map((item) => [item.latitude, item.longitude]);
+            polyline.setLatLngs(coordinates);
+        }
 
-    // Función para trazar la polilínea en el mapa
-    function trazarPolilinea(data) {
-        const coordinates = data.map((item) => [item.latitude, item.longitude]);
-        polyline.setLatLngs(coordinates);
-    }
-
-    // Ejecuta la búsqueda y actualización al cambiar la fecha
-    document.getElementById('fechaInput').addEventListener('change', buscarEnBaseDeDatos);
-</script>
+        // Ejecuta la búsqueda y actualización al cambiar la fecha
+        document.getElementById('fechaInput').addEventListener('change', buscarEnBaseDeDatos);
+    </script>
 </body>
 
 </html>

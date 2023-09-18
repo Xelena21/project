@@ -22,8 +22,25 @@ h1 {
     padding: 20px;
     text-align: center;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
+}
+
+.container-izq{
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+}
+.container-der{
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+    position: relative;
+    top:0;
+}
+.container-tabla{
+    position: relative;
+    margin-bottom:60%;
 }
 
 .information {

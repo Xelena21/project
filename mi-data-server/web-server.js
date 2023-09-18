@@ -69,6 +69,33 @@ app.get('/api/ubicaciones/ultimo', async (req, res) => {
     }
 });
 
+app.get('/api/ubicaciones/por-fecha', async (req, res) => {
+    try {
+        // Obtén la fecha de la solicitud desde los parámetros de la URL
+        var fechaConsulta = req.query.fecha; // Debes incluir la fecha en el formato adecuado
+        console.log(fechaConsulta)
+
+        if (!fechaConsulta) {
+            return res.status(400).json({ message: 'Debes proporcionar una fecha para la consulta' });
+        }
+
+        const connection = await connectToDB();
+        // Utiliza un parámetro en la consulta SQL para obtener los datos de la fecha especificada
+        const [rows, fields] = await connection.execute('SELECT * FROM ubicaciones WHERE DATE(CONVERT_TZ(time_stamp, "UTC", "America/Bogota")) = ? ORDER BY id DESC', [fechaConsulta]);
+        connection.end();
+
+        if (rows.length > 0) {
+            res.status(200).json(rows);
+        } else {
+            res.status(404).json({ message: 'No se encontraron registros para la fecha especificada' });
+        }
+    } catch (error) {
+        console.error('Error al obtener los datos por fecha:', error);
+        res.status(500).json({ message: 'Error en el servidor' });
+    }
+});
+
+
 app.post('/webhook', express.json(), (req, res) => {
     const crypto = require('crypto');
 
