@@ -4,10 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta de historicos</title>
+    <title>Consulta de históricos</title>
     <!-- Incluye las hojas de estilo de Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="style-historicos.css" />
+    <style>
+        /* Estilo para el infoBox */
+        #infoBox {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 10px;
+            position: relative;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
@@ -21,12 +33,12 @@
             <a href="index.html"><button class="centerMapButton">RECEPCIÓN GPS</button></a>
         </div>
 
-
         <!-- Calendario -->
         <div class="container-der">
             <div class="container-tabla">
                 <label for="fechaInput">Selecciona una fecha:</label>
                 <input type="date" id="fechaInput">
+                <button onclick="buscarEnBaseDeDatos()">Buscar</button>
                 <!-- Contenedor de la tabla -->
                 <div id="infoTableContainer">
                     <!-- Tabla para mostrar la información -->
@@ -45,38 +57,32 @@
                 </div>
             </div>
 
+            <!-- Div para mostrar la información del lugar -->
+            <div id="infoBox">
+                <h3>Información del lugar:</h3>
+                <p id="infoText"></p>
+            </div>
         </div>
-
-
-
     </div>
-    </div>
+
     <!-- Incluye el script de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script>
-        // Variable para almacenar la última ubicación conocida
-        var lastKnownLocation = null;
-        var lastLatitude;
-        var lastLongitude;
-
-        // Configura el mapa Leaflet
         var map = L.map('map').setView([0, 0], 13);
         var polyline = L.polyline([], { color: 'blue' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-
-        // Crea un marcador y agrégalo al mapa
         var marker = L.marker([0, 0]).addTo(map);
 
-    
+        // Variable global para almacenar los datos
+        var data = [];
 
-        function centerMap(latitude, longitude) {
+        async function centerMap(latitude, longitude) {
             map.setView([latitude, longitude], 13);
         }
 
-        // Función para obtener la ubicación más reciente y centrar el mapa
         async function fetchAndCenterMap() {
             try {
                 const response = await fetch('/api/ubicaciones/ultimo');
@@ -85,7 +91,7 @@
                     throw new Error('Error al obtener la ubicación más reciente');
                 }
 
-                const data = await response.json();
+                data = await response.json();
                 const { latitude, longitude } = data;
                 console.log(latitude, longitude)
                 lastLatitude = latitude;
@@ -98,7 +104,6 @@
             }
         }
 
-        // Ejecuta la función cuando la página se carga completamente
         window.addEventListener('load', fetchAndCenterMap);
 
         async function buscarEnBaseDeDatos() {
@@ -111,7 +116,7 @@
                     throw new Error('Error en la solicitud');
                 }
 
-                const data = await response.json();
+                data = await response.json();
                 if (data.message) {
                     throw new Error(data.message);
                 }
@@ -123,7 +128,6 @@
                 // Aquí puedes manejar el error de acuerdo a tus necesidades, por ejemplo, mostrar un mensaje al usuario
             }
         }
-
 
         function mostrarInformacionEnTabla(data) {
             const tableBody = document.querySelector('#infoTable tbody');
@@ -158,14 +162,34 @@
             });
         }
 
-        // Función para trazar la polilínea en el mapa
         function trazarPolilinea(data) {
             const coordinates = data.map((item) => [item.latitude, item.longitude]);
             polyline.setLatLngs(coordinates);
         }
 
-        // Ejecuta la búsqueda y actualización al cambiar la fecha
-        document.getElementById('fechaInput').addEventListener('change', buscarEnBaseDeDatos);
+        // Añadimos la funcionalidad de dibujar un círculo en el mapa y buscar ubicaciones dentro de él
+        var circle;
+
+        map.on('click', function (e) {
+            if (circle) {
+                map.removeLayer(circle);
+            }
+
+            circle = L.circle(e.latlng, {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.5,
+                radius: 500 // radio en metros
+            }).addTo(map);
+
+            // Actualizar el contenido del infoBox
+            const infoText = `Latitud: ${e.latlng.lat.toFixed(6)}, Longitud: ${e.latlng.lng.toFixed(6)}, Hora: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('infoText').textContent = infoText;
+            document.getElementById('infoBox').style.display = 'block'; // Mostrar el infoBox
+
+            // Llamar a la función que busca ubicaciones dentro del círculo
+            buscarUbicacionesEnCirculo(e.latlng.lat, e.latlng.lng);
+        });
     </script>
 </body>
 
