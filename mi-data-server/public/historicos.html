@@ -4,10 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consulta de historicos</title>
+    <title>Consulta de históricos</title>
     <!-- Incluye las hojas de estilo de Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="style-historicos.css" />
+    <style>
+        /* Estilo para el infoBox */
+        #infoBox {
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 10px;
+            position: relative;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
@@ -21,12 +33,16 @@
             <a href="index.html"><button class="centerMapButton">RECEPCIÓN GPS</button></a>
         </div>
 
-
         <!-- Calendario -->
         <div class="container-der">
             <div class="container-tabla">
-                <label for="fechaInput">Selecciona una fecha:</label>
-                <input type="date" id="fechaInput">
+                <div class="calendar">
+                    <label for="fechaInput">Selecciona una fecha de inicio:</label>
+                    <input type="date" id="fechaInicial">
+                    <label for="fechaInput">Selecciona una fecha de final:</label>
+                    <input type="date" id="fechaFinal">
+                    <button onclick="buscarEnBaseDeDatos()">Buscar</button>
+                </div>
                 <!-- Contenedor de la tabla -->
                 <div id="infoTableContainer">
                     <!-- Tabla para mostrar la información -->
@@ -45,38 +61,32 @@
                 </div>
             </div>
 
+            <!-- Div para mostrar la información del lugar -->
+            <div id="infoBox">
+                <h3>Información del lugar:</h3>
+                <p id="infoText"></p>
+            </div>
         </div>
-
-
-
     </div>
-    </div>
+
     <!-- Incluye el script de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script>
-        // Variable para almacenar la última ubicación conocida
-        var lastKnownLocation = null;
-        var lastLatitude;
-        var lastLongitude;
-
-        // Configura el mapa Leaflet
         var map = L.map('map').setView([0, 0], 13);
         var polyline = L.polyline([], { color: 'blue' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-
-        // Crea un marcador y agrégalo al mapa
         var marker = L.marker([0, 0]).addTo(map);
 
-    
+        // Variable global para almacenar los datos
+        var data = [];
 
-        function centerMap(latitude, longitude) {
+        async function centerMap(latitude, longitude) {
             map.setView([latitude, longitude], 13);
         }
 
-        // Función para obtener la ubicación más reciente y centrar el mapa
         async function fetchAndCenterMap() {
             try {
                 const response = await fetch('/api/ubicaciones/ultimo');
@@ -85,7 +95,7 @@
                     throw new Error('Error al obtener la ubicación más reciente');
                 }
 
-                const data = await response.json();
+                data = await response.json();
                 const { latitude, longitude } = data;
                 console.log(latitude, longitude)
                 lastLatitude = latitude;
@@ -98,15 +108,16 @@
             }
         }
 
-        // Ejecuta la función cuando la página se carga completamente
         window.addEventListener('load', fetchAndCenterMap);
 
         async function buscarEnBaseDeDatos() {
-            const fechaInput = document.getElementById('fechaInput').value;
-            const formattedDate = new Date(fechaInput).toISOString();
+            const fechaInicial = document.getElementById('fechaInicial').value;
+            const fechaFinal = document.getElementById('fechaFinal').value;
+            const formattedDateInicial = new Date(fechaInicial).toISOString();
+            const formattedDateFinal = new Date(fechaFinal).toISOString();
 
             try {
-                const response = await fetch(`/api/ubicaciones/por-fecha?fecha=${formattedDate}`);
+                const response = await fetch(`/api/ubicaciones/por-rango-fechas?fechaInicio=${formattedDateInicial}&fechaFin=${formattedDateFinal}`);
                 if (!response.ok) {
                     throw new Error('Error en la solicitud');
                 }
@@ -118,12 +129,24 @@
 
                 mostrarInformacionEnTabla(data);
                 trazarPolilinea(data);
+
             } catch (error) {
                 console.error('Error al buscar en la base de datos:', error.message);
                 // Aquí puedes manejar el error de acuerdo a tus necesidades, por ejemplo, mostrar un mensaje al usuario
             }
         }
 
+        // Define la función para mostrar información en la tabla
+        function mostrarInformacionEnTabla(data) {
+            const tabla = document.getElementById('tablaResultados');
+            tabla.innerHTML = ''; // Limpia la tabla antes de agregar datos
+
+            // Puedes iterar sobre 'data' y agregar filas a la tabla
+            data.forEach((item) => {
+                const fila = tabla.insertRow();
+                // Agrega celdas a la fila y muestra la información que desees
+            });
+        }
 
         function mostrarInformacionEnTabla(data) {
             const tableBody = document.querySelector('#infoTable tbody');
@@ -158,14 +181,67 @@
             });
         }
 
-        // Función para trazar la polilínea en el mapa
         function trazarPolilinea(data) {
             const coordinates = data.map((item) => [item.latitude, item.longitude]);
             polyline.setLatLngs(coordinates);
         }
 
-        // Ejecuta la búsqueda y actualización al cambiar la fecha
-        document.getElementById('fechaInput').addEventListener('change', buscarEnBaseDeDatos);
+        // Añadimos la funcionalidad de dibujar un círculo en el mapa y buscar ubicaciones dentro de él
+        var circle;
+
+        map.on('click', function (e) {
+            if (circle) {
+                map.removeLayer(circle);
+            }
+
+            circle = L.circle(e.latlng, {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.5,
+                radius: 1000 // radio en metros
+            }).addTo(map);
+
+            // Actualizar el contenido del infoBox
+            const infoText = `Latitud: ${e.latlng.lat.toFixed(6)}, Longitud: ${e.latlng.lng.toFixed(6)}, Hora: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('infoText').textContent = infoText;
+            document.getElementById('infoBox').style.display = 'block'; // Mostrar el infoBox
+
+            // Llamar a la función que busca ubicaciones dentro del círculo
+            buscarUbicacionesEnCirculo(e.latlng.lat, e.latlng.lng);
+        });
+
+
+        async function buscarUbicacionesEnCirculo(latitud, longitud) {
+            // Definir el radio del círculo en metros (debe coincidir con el radio del círculo dibujado en el mapa)
+            const radioCirculo = 1000;
+            const radioKm = radioCirculo/1000;
+
+            try {
+                // Construir la URL de la solicitud con los parámetros de query
+                const url = `/api/ubicaciones/por-circulo?latitud=${latitud}&longitud=${longitud}&radio=${radioKm}`;
+
+                // Realizar una solicitud AJAX al servidor para buscar ubicaciones dentro del círculo
+                const response = await fetch(url, {
+                    method: 'GET', // Utiliza el método HTTP GET para consultar
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error en la solicitud');
+                }
+
+                const data = await response.json();
+                console.log(data)
+                // Procesar los resultados de la búsqueda, por ejemplo, mostrarlos en una lista o en el mapa
+                trazarPolilinea(data);
+            } catch (error) {
+                console.error('Error al buscar ubicaciones en el círculo:', error);
+                // Manejar el error de acuerdo a tus necesidades, por ejemplo, mostrar un mensaje al usuario
+            }
+        }
+
     </script>
 </body>
 

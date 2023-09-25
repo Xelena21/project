@@ -69,28 +69,64 @@ app.get('/api/ubicaciones/ultimo', async (req, res) => {
     }
 });
 
-app.get('/api/ubicaciones/por-fecha', async (req, res) => {
+app.get('/api/ubicaciones/por-rango-fechas', async (req, res) => {
     try {
-        // Obtén la fecha de la solicitud desde los parámetros de la URL
-        var fechaConsulta = req.query.fecha; // Debes incluir la fecha en el formato adecuado
-        console.log(fechaConsulta)
+        // Obtén las fechas de inicio y fin del rango desde los parámetros de la URL
+        var fechaInicio = req.query.fechaInicio; // Debes incluir la fecha de inicio en el formato adecuado
+        var fechaFin = req.query.fechaFin; // Debes incluir la fecha de fin en el formato adecuado
+        console.log(fechaInicio, fechaFin);
 
-        if (!fechaConsulta) {
-            return res.status(400).json({ message: 'Debes proporcionar una fecha para la consulta' });
+        if (!fechaInicio || !fechaFin) {
+            return res.status(400).json({ message: 'Debes proporcionar ambas fechas para la consulta' });
         }
 
         const connection = await connectToDB();
-        // Utiliza un parámetro en la consulta SQL para obtener los datos de la fecha especificada
-        const [rows, fields] = await connection.execute('SELECT * FROM ubicaciones WHERE DATE(CONVERT_TZ(time_stamp, "UTC", "America/Bogota")) = ? ORDER BY id DESC', [fechaConsulta]);
+        // Utiliza parámetros en la consulta SQL para obtener los datos dentro del rango de fechas especificado
+        const [rows, fields] = await connection.execute('SELECT * FROM ubicaciones WHERE DATE(CONVERT_TZ(time_stamp, "UTC", "America/Bogota")) BETWEEN ? AND ? ORDER BY id DESC', [fechaInicio, fechaFin]);
         connection.end();
 
         if (rows.length > 0) {
             res.status(200).json(rows);
         } else {
-            res.status(404).json({ message: 'No se encontraron registros para la fecha especificada' });
+            res.status(404).json({ message: 'No se encontraron registros para el rango de fechas especificado' });
         }
     } catch (error) {
-        console.error('Error al obtener los datos por fecha:', error);
+        console.error('Error al obtener los datos por rango de fechas:', error);
+        res.status(500).json({ message: 'Error en el servidor' });
+    }
+});
+
+// Ruta para buscar ubicaciones dentro de un círculo utilizando parámetros de consulta
+app.get('/api/ubicaciones/por-circulo', async (req, res) => {
+    try {
+        const latitud = parseFloat(req.query.latitud); // Obtener latitud de la consulta
+        const longitud = parseFloat(req.query.longitud); // Obtener longitud de la consulta
+        const radio = parseFloat(req.query.radio); // Obtener radio de la consulta
+
+        if (isNaN(latitud) || isNaN(longitud) || isNaN(radio)) {
+            return res.status(400).json({ message: 'Parámetros de consulta no válidos' });
+        }
+
+        const connection = await connectToDB();
+
+        // Consulta SQL utilizando la fórmula Haversine para buscar ubicaciones dentro del círculo
+        const query = `
+            SELECT *,
+            6371 * ACOS(
+                COS(RADIANS(?)) * COS(RADIANS(latitude)) * COS(RADIANS(? - longitude)) +
+                SIN(RADIANS(?)) * SIN(RADIANS(latitude))
+            ) AS distancia
+            FROM ubicaciones
+            HAVING distancia < ?
+        `;
+
+        const [rows, fields] = await connection.execute(query, [latitud, longitud, latitud, radio]);
+
+        connection.end();
+
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Error al buscar ubicaciones en el círculo:', error);
         res.status(500).json({ message: 'Error en el servidor' });
     }
 });
