@@ -36,6 +36,7 @@
         <!-- Calendario -->
         <div class="container-der">
             <div class="container-tabla">
+<<<<<<< HEAD
                 <div class="calendar">
                     <label for="fechaInput">Selecciona una fecha de inicio:</label>
                     <input type="date" id="fechaInicial">
@@ -43,6 +44,11 @@
                     <input type="date" id="fechaFinal">
                     <button onclick="buscarEnBaseDeDatos()">Buscar</button>
                 </div>
+=======
+                <label for="fechaInput">Selecciona una fecha:</label>
+                <input type="date" id="fechaInput">
+                <button onclick="buscarEnBaseDeDatos()">Buscar</button>
+>>>>>>> 7575a4164f5b853d3c9e39476ce29083523f1c17
                 <!-- Contenedor de la tabla -->
                 <div id="infoTableContainer">
                     <!-- Tabla para mostrar la información -->
@@ -122,7 +128,7 @@
                     throw new Error('Error en la solicitud');
                 }
 
-                const data = await response.json();
+                data = await response.json();
                 if (data.message) {
                     throw new Error(data.message);
                 }
@@ -136,6 +142,7 @@
             }
         }
 
+<<<<<<< HEAD
         // Define la función para mostrar información en la tabla
         function mostrarInformacionEnTabla(data) {
             const tabla = document.getElementById('tablaResultados');
@@ -148,6 +155,8 @@
             });
         }
 
+=======
+>>>>>>> 7575a4164f5b853d3c9e39476ce29083523f1c17
         function mostrarInformacionEnTabla(data) {
             const tableBody = document.querySelector('#infoTable tbody');
             tableBody.innerHTML = '';
@@ -198,7 +207,11 @@
                 color: 'red',
                 fillColor: '#f03',
                 fillOpacity: 0.5,
+<<<<<<< HEAD
                 radius: 1000 // radio en metros
+=======
+                radius: 500 // radio en metros
+>>>>>>> 7575a4164f5b853d3c9e39476ce29083523f1c17
             }).addTo(map);
 
             // Actualizar el contenido del infoBox
@@ -209,6 +222,7 @@
             // Llamar a la función que busca ubicaciones dentro del círculo
             buscarUbicacionesEnCirculo(e.latlng.lat, e.latlng.lng);
         });
+<<<<<<< HEAD
 
 
         async function buscarUbicacionesEnCirculo(latitud, longitud) {
@@ -242,6 +256,8 @@
             }
         }
 
+=======
+>>>>>>> 7575a4164f5b853d3c9e39476ce29083523f1c17
     </script>
 </body>
 
