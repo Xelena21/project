@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <style>
+        body {
+            background-image: url("fondo00.jpg");
+            background-size: cover;
+        }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recepción de Datos GPS</title>
+    <!-- Incluye las hojas de estilo de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+</head>
+
+<body>
+    <header class="bg_animate">
+        <div class="container" style="background-color: rgba(255, 255, 255, 0.5); padding: 38px;">
+            <h1>RECEPCIÓN DE DATOS GPS</h1>
+            <div class="information">
+                <strong>Latitud:</strong>
+                <p id="latitud">Cargando...</p>
+                <strong>Longitud:</strong>
+                <p id="longitud">Cargando...</p>
+                <strong>Fecha y Hora:</strong>
+                <p id="fechaHora">Cargando...</p>
+            </div>
+            <!-- Agrega un contenedor para el mapa Leaflet -->
+            <div id="map"></div>
+
+            <!-- Agrega un botón para centrar el mapa en la ubicación actual -->
+            <div class="botones"><button class="centerMapButton" id="centerMapButton">CENTRAR MARCADOR</button>
+                <a href="historicos.html"><button class="centerMapButton">CONSULTA DE HISTORICOS</button></a>
+                
+            </div>
+			
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop"
+            style="margin-top: 20px;">
+            ¿Cómo funciona?
+        </button>
+			
+        </div>
+        <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+            aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="staticBackdropLabel">Instrucciones</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h2 class="fs-5">Información brindada:</h2>
+
+                        <p>En este apartado encontrarás información relacionada con la última locación GPS obtenida por
+                            el app.
+                        <p>Se regsitra coordenadas (latitud y longitud), fecha y hora del último registro.</p>
+
+                        <hr>
+                        <div class="container-fluid">
+                            <div class="row">
+                                <img class="col-md-6 ms-auto"
+                                    src="https://www.gps-coordinates.net/images/gps-og-image.jpg">
+                                <div class="col-md-6 ms-auto">
+                                    <p>El puntero azul indica la última locación registrada del GPS. </p>
+                                    <p> Navega por el mapa arrastrando el click del mouse. </p>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <h2 class="fs-5">Navegación</h2>
+
+                        <p>Presionando el botón: <button class="centerMapButton" id="centerMapButton">CENTRAR
+                                MARCADOR</button> podrás ubicar el mapa en el ultimo punto registrado por el GPS.</p>
+
+
+                        <p>Presionando el botón: <a href="historicos.html"><button class="centerMapButton">CONSULTA DE
+                                    HISTORICOS</button></a> podrás consultar en el historial de ubicaciones registradas
+                            por
+                            el GPS.</p>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="burbujas">
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+            <div class="burbuja"></div>
+        </div>
+    </header>
+    <!-- Incluye el script de Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+
+    <script>
+        // Variable para almacenar la última ubicación conocida
+        var lastKnownLocation = null;
+        var lastLatitude;
+        var lastLongitude;
+
+
+
+        // Función para calcular la distancia entre dos puntos geográficos (fórmula haversine)
+        function calcularDistancia(lat1, lon1, lat2, lon2) {
+            var radLat1 = (Math.PI * lat1) / 180;
+            var radLat2 = (Math.PI * lat2) / 180;
+            var theta = lon1 - lon2;
+            var radTheta = (Math.PI * theta) / 180;
+            var dist =
+                Math.sin(radLat1) * Math.sin(radLat2) +
+                Math.cos(radLat1) * Math.cos(radLat2) * Math.cos(radTheta);
+            dist = Math.acos(dist);
+            dist = (dist * 180) / Math.PI;
+            dist = dist * 60 * 1.1515; // En millas
+            dist = dist * 1.609344; // En kilómetros
+            return dist;
+        }
+
+        // Función para actualizar la ubicación en tiempo real
+        function actualizarUbicacion(latitud, longitud, fechaHora) {
+            // Actualiza los elementos HTML con los datos recibidos
+            document.getElementById("latitud").innerText = `${latitud}`;
+            document.getElementById("longitud").innerText = `${longitud}`;
+            document.getElementById("fechaHora").innerText = `${fechaHora}`;
+
+            // Actualiza el marcador en el mapa Leaflet
+            marker.setLatLng([latitud, longitud]);
+
+            //map.setView([latitud, longitud], 13);
+            polyline.addLatLng([latitud, longitud]);
+        }
+
+        // Configura el mapa Leaflet
+        var map = L.map('map').setView([0, 0], 13);
+        var polyline = L.polyline([], { color: 'blue' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Crea un marcador y agrégalo al mapa
+        var marker = L.marker([0, 0]).addTo(map);
+
+        // Función para obtener la ubicación del usuario y actualizar si hay cambios significativos
+        function obtenerUbicacionUsuario() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(function (position) {
+                    var latitud = position.coords.latitude;
+                    var longitud = position.coords.longitude;
+                    var fechaHora = new Date().toLocaleString();
+
+                    if (
+                        !lastKnownLocation ||
+                        calcularDistancia(lastKnownLocation.lat, lastKnownLocation.lng, latitud, longitud) > 0.01
+                    ) {
+                        lastKnownLocation = { lat: latitud, lng: longitud };
+
+                        actualizarUbicacion(latitud, longitud, fechaHora);
+
+                        map.setView([latitud, longitud], 13);
+                    }
+                }, function (error) {
+                    console.error('Error al obtener la ubicación:', error);
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                });
+            } else {
+                console.log("Geolocalización no está disponible en este navegador.");
+            }
+        }
+
+        document.getElementById("centerMapButton").addEventListener("click", function () {
+            centerMap(lastLatitude, lastLongitude);
+        });
+
+
+        //Función que trae el ultimo dato de la db
+        async function fetchUbicacionUltima() {
+            try {
+                const response = await fetch('/api/ubicaciones/ultimo');
+
+                if (!response.ok) {
+                    throw new Error('Error al obtener la ubicación más reciente');
+                }
+
+                const data = await response.json();
+                const { latitude, longitude, time_stamp } = data;
+                lastLatitude = latitude;
+                lastLongitude = longitude;
+
+                // Crear un objeto Date a partir del timestamp y establecer la zona horaria explícitamente
+                const date = new Date(time_stamp);
+                date.setUTCHours(date.getUTCHours() - 5); // Ajustar a GMT-5 (Bogotá)
+
+                // Formatear la fecha y hora en el formato deseado (incluyendo la fecha)
+                const formattedDate = date.toLocaleString('es-CO', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour12: true, // Usar formato de 12 horas (AM/PM)
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                actualizarUbicacion(latitude, longitude, formattedDate);
+            } catch (error) {
+                console.error('Error al obtener la ubicación más reciente:', error);
+                // Maneja el error aquí si es necesario
+            }
+        }
+
+        function centerMap(latitude, longitude) {
+            map.setView([latitude, longitude], 13);
+        }
+
+        // Función para obtener la ubicación más reciente y centrar el mapa
+        async function fetchAndCenterMap() {
+            try {
+                const response = await fetch('/api/ubicaciones/ultimo');
+
+                if (!response.ok) {
+                    throw new Error('Error al obtener la ubicación más reciente');
+                }
+
+                const data = await response.json();
+                const { latitude, longitude } = data;
+                console.log(latitude, longitude)
+                lastLatitude = latitude;
+                lastLongitude = longitude;
+                // Centra el mapa en las coordenadas obtenidas
+                centerMap(latitude, longitude);
+            } catch (error) {
+                console.error('Error al obtener la ubicación más reciente:', error);
+                // Maneja el error aquí si es necesario
+            }
+        }
+
+
+
+
+
+        // Función para obtener y actualizar la ubicación cada 5 segundos
+        function obtenerYActualizarUbicacion() {
+            fetchUbicacionUltima();
+            setTimeout(obtenerYActualizarUbicacion, 5000);
+        }
+
+        obtenerYActualizarUbicacion();
+
+        // Ejecuta la función cuando la página se carga completamente
+        window.addEventListener('load', fetchAndCenterMap);
+
+        async function buscarEnBaseDeDatos() {
+            const fechaInput = document.getElementById('fechaInput').value;
+            const formattedDate = new Date(fechaInput).toISOString();
+
+            try {
+                const response = await fetch(`/api/ubicaciones/por-fecha?fecha=${formattedDate}`);
+                if (!response.ok) {
+                    throw new Error('Error en la solicitud');
+                }
+
+                const data = await response.json();
+                if (data.message) {
+                    throw new Error(data.message);
+                }
+
+                mostrarInformacionEnTabla(data);
+                trazarPolilinea(data);
+            } catch (error) {
+                console.error('Error al buscar en la base de datos:', error.message);
+                // Aquí puedes manejar el error de acuerdo a tus necesidades, por ejemplo, mostrar un mensaje al usuario
+            }
+        }
+
+
+        function mostrarInformacionEnTabla(data) {
+            const tableBody = document.querySelector('#infoTable tbody');
+            tableBody.innerHTML = '';
+
+            data.forEach((item) => {
+                const row = tableBody.insertRow();
+                const cell1 = row.insertCell(0);
+                const cell2 = row.insertCell(1);
+                const cell3 = row.insertCell(2);
+
+                cell1.textContent = item.latitude;
+                cell2.textContent = item.longitude;
+
+                // Convertir la hora a la zona horaria de Bogotá (GMT-5)
+                const dateUTC = new Date(item.time_stamp);
+                const dateBogota = new Date(dateUTC);
+                dateBogota.setUTCHours(dateBogota.getUTCHours() - 5); // Ajustar a GMT-5 (Bogotá)
+
+                // Formatear la fecha y hora en el formato deseado (incluyendo la fecha)
+                const formattedDate = dateBogota.toLocaleString('es-CO', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour12: true, // Usar formato de 12 horas (AM/PM)
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                cell3.textContent = formattedDate;
+            });
+        }
+
+        // Función para trazar la polilínea en el mapa
+        function trazarPolilinea(data) {
+            const coordinates = data.map((item) => [item.latitude, item.longitude]);
+            polyline.setLatLngs(coordinates);
+        }
+
+        // Ejecuta la búsqueda y actualización al cambiar la fecha
+        document.getElementById('fechaInput').addEventListener('change', buscarEnBaseDeDatos);
+    </script>
+</body>
+
+</html>
