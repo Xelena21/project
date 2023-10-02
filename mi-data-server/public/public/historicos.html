@@ -258,7 +258,7 @@
     
     circle.setLatLng(interpolatedLatLng);
 
-    // Nueva parte para actualizar el contenido del popup
+    // *Nueva parte para actualizar el contenido del popup*
     const popupContent = `Latitud: ${interpolatedLatLng.lat.toFixed(6)}, Longitud: ${interpolatedLatLng.lng.toFixed(6)}`;
     circle.bindPopup(popupContent).openPopup();
 }

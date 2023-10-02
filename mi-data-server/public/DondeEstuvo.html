@@ -8,13 +8,14 @@
             background-size: cover;
         }
     </style>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Consulta de históricos</title>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-      <link rel="stylesheet" href="style-historicos.css" />
-	  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
-       integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de históricos</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="style-historicos.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
     <style>
         /* Estilo para el infoBox */
         #infoBox {
@@ -26,47 +27,73 @@
             margin-top: 20px;
             display: none;
         }
-        /* Añadido para las barras deslizantes */
-.slider-container {
-    margin-top: 20px;
-}
 
-.slider-label {
-    font-size: 18px;
-}
+        /* Estilo para el mapa */
+        #map {
+            height: 400px;
+        }
 
-.slider {
-    width: 80%;
-    margin-top: 10px;
-}
+        /* Estilo para las barras deslizadoras */
+        .slider-container {
+            width: 90%;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .slider-container input[type="range"] {
+            width: 55%;
+        }
     </style>
+
 </head>
+<header>
+
+</header>
 
 <body>
-    <h1>CONSULTA DE HISTÓRICOS</h1>
+    <h1>CONSULTA DE UBICACIÓN</h1>
     <div class="container" style="background-color: rgba(255, 255, 255, 0.5);">
         <!-- Agrega un contenedor para el mapa Leaflet -->
         <div class="container-izq">
             <div id="map"></div>
-
-            <!-- Agrega un botón para centrar el mapa en la ubicación actual -->
+            <div class="slider-container">
+                <label for="circleRadius">Ajusta el tamaño del círculo: </label>
+                <input type="range" id="circleRadius" min="100" max="1000" step="100" value="500"
+                    oninput="updateCircleRadius(this.value)">
+            </div>
+            <div class="slider-container">
+                <label class="slider-label" for="positionSlider">Posición en el recorrido:</label>
+                <input type="range" min="0" max="1" step="0.01" value="0" class="slider" id="positionSlider" oninput="updateCirclePosition(this.value)">
+            </div>
+            <!-- Volver pantalla recepción -->
             <a href="home.html"><button class="centerMapButton">RECEPCIÓN GPS</button></a>
         </div>
 
         <!-- Calendario -->
         <div class="container-der">
-            <div class="container-tabla">
+            <div class="container-busqueda" id="busqueda">
                 <div class="calendar">
                     <label for="fechaInput">Selecciona una fecha y hora de inicio:</label>
                     <input type="datetime-local" id="fechaInicial">
                     <label for="fechaInput">Selecciona una fecha y hora final:</label>
                     <input type="datetime-local" id="fechaFinal">
-                    <button onclick="buscarEnBaseDeDatos()">Buscar</button>
+                    <button onclick="buscarEnBaseDeDatos()" class="btn btn-success">Buscar</button>
+                </div>
+            </div>
+            <div class="container-tabla" id="tabla">
+                <div class="Tcalendar">
+                    <label for="fechaInput">Inicio:</label>
+                    <input type="datetime-local" id="fechaInicial">
+                    <label for="fechaInput">Final:</label>
+                    <input type="datetime-local" id="fechaFinal">
+                    <button onclick="buscarEnBaseDeDatos()" class="btn btn-success">Actualizar</button>
                 </div>
                 <!-- Contenedor de la tabla -->
                 <div id="infoTableContainer">
                     <!-- Tabla para mostrar la información -->
-                    <table id="infoTable">
+                    <table class="table" id="infoTable">
                         <thead>
                             <tr>
                                 <th>Latitud</th>
@@ -78,6 +105,7 @@
                             <!-- Aquí se llenará dinámicamente con JavaScript -->
                         </tbody>
                     </table>
+
                 </div>
             </div>
 
@@ -86,39 +114,70 @@
                 <h3>Información del lugar:</h3>
                 <p id="infoText"></p>
             </div>
+
         </div>
     </div>
 	
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop"
+        style="margin-top: 20px;">
+        ¿Cómo funciona?
+    </button>
 
-    <!-- Añadido para las barras deslizantes -->
-<div class="slider-container">
-    <label class="slider-label" for="radiusSlider">Radio del círculo: <span id="radiusValue">500</span> metros</label>
-    <input type="range" min="100" max="1000" value="500" class="slider" id="radiusSlider" oninput="updateCircleRadius(this.value)">
-</div>
+    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Instrucciones</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
 
-<div class="slider-container">
-    <label class="slider-label" for="positionSlider">Posición en el recorrido:</label>
-    <input type="range" min="0" max="1" step="0.01" value="0" class="slider" id="positionSlider" oninput="updateCirclePosition(this.value)">
-</div>
+                    <p>En este apartado se puede consultar el historial de locaciones registradas por la aplicación,
+                        filtrando por fecha y hora.
+                    <p>Posteriormente se mostrará una tabla con los registros obtenidos de la base de datos.</p>
+                    <hr>
+                    <h2 class="fs-5">Navegación</h2>
+                    <p>Selecciona fecha y hora de registro que deseas consultar. </p>
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-md-4 ms-auto">
+                                <p>Por ejemplo:
+                            </div>
+                            <img class="col-md-8 ms-auto" src="../public/img/time.png">
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <img class="col-md-6 ms-auto" src="../public/img/maphist.png">
+                            <div class="col-md-6 ms-auto">
+                                <p>Si se encuentran datos, se trazará una ruta en el mapa y podrás seleccionar zonas
+                                    especificas con el puntero.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Incluye el script de Leaflet -->
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-        crossorigin="anonymous">
-	</script>
-
-
+        crossorigin="anonymous"></script>
     <script>
         var map = L.map('map').setView([0, 0], 13);
         var polyline = L.polyline([], { color: 'blue' }).addTo(map);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-        var marker = L.marker([0, 0]).addTo(map);
+        var circle = L.circle([0, 0], { radius: 500, color: 'red' }).addTo(map);
 
         // Variable global para almacenar los datos
         var data = [];
+
+        let SeccionTabla = document.getElementById('tabla')
+        SeccionTabla.style.display = 'none'
 
         async function centerMap(latitude, longitude) {
             map.setView([latitude, longitude], 13);
@@ -131,14 +190,13 @@
                 if (!response.ok) {
                     throw new Error('Error al obtener la ubicación más reciente');
                 }
-
                 data = await response.json();
                 const { latitude, longitude } = data;
-                console.log(latitude, longitude)
                 lastLatitude = latitude;
                 lastLongitude = longitude;
                 // Centra el mapa en las coordenadas obtenidas
                 centerMap(latitude, longitude);
+                updateCirclePosition(0);  // Inicializa la posición del círculo
             } catch (error) {
                 console.error('Error al obtener la ubicación más reciente:', error);
                 // Maneja el error aquí si es necesario
@@ -148,6 +206,11 @@
         window.addEventListener('load', fetchAndCenterMap);
 
         async function buscarEnBaseDeDatos() {
+            SeccionBusqueda = document.getElementById('busqueda')
+            SeccionBusqueda.style.display = 'none'
+            SeccionTabla = document.getElementById('tabla')
+            SeccionTabla.style.display = 'block'
+
             const fechaInicial = document.getElementById('fechaInicial').value;
             const fechaFinal = document.getElementById('fechaFinal').value;
             const formattedDateInicial = new Date(fechaInicial).toISOString();
@@ -180,12 +243,10 @@
             }
         }
 
-        // Define la función para mostrar información en la tabla
         function mostrarInformacionEnTabla(data) {
             const tabla = document.getElementById('infoTable').getElementsByTagName('tbody')[0];
-            tabla.innerHTML = ''; // Limpia la tabla antes de agregar datos
+            tabla.innerHTML = '';
 
-            // Puedes iterar sobre 'data' y agregar filas a la tabla
             data.forEach((item) => {
                 const fila = tabla.insertRow();
                 const celda1 = fila.insertCell(0);
@@ -195,17 +256,15 @@
                 celda1.textContent = item.latitude;
                 celda2.textContent = item.longitude;
 
-                // Convertir la hora a la zona horaria de Bogotá (GMT-5)
                 const dateUTC = new Date(item.time_stamp);
                 const dateBogota = new Date(dateUTC);
-                dateBogota.setUTCHours(dateBogota.getUTCHours() - 5); // Ajustar a GMT-5 (Bogotá)
+                dateBogota.setUTCHours(dateBogota.getUTCHours() - 5);
 
-                // Formatear la fecha y hora en el formato deseado (incluyendo la fecha)
                 const formattedDate = dateBogota.toLocaleString('es-CO', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
-                    hour12: true, // Usar formato de 12 horas (AM/PM)
+                    hour12: true,
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit'
@@ -224,6 +283,20 @@
             circle.setRadius(radius);
         }
 
+        function updateCirclePosition(position) {
+            const totalPoints = polyline.getLatLngs().length;
+            const index = Math.floor(position * (totalPoints - 1));
+            const latlng1 = polyline.getLatLngs()[index];
+            const latlng2 = polyline.getLatLngs()[index + 1];
+
+            const interpolatedLatLng = L.latLng(
+                latlng1.lat + position * (latlng2.lat - latlng1.lat),
+                latlng1.lng + position * (latlng2.lng - latlng1.lng)
+            );
+
+            circle.setLatLng(interpolatedLatLng);
+        }
+
         map.on('click', function(event) {
             const latlng = event.latlng;
             if (latlng) {
@@ -233,99 +306,7 @@
             }
         });
 
-        // Agrega el círculo con radio inicial de 500 metros
-        var circle = L.circle([0, 0], {
-            radius: 500,
-            color: 'red'
-        }).addTo(map);
-
-        // Función para actualizar el radio del círculo
-        function updateCircleRadius(radius) {
-            circle.setRadius(radius);
-            document.getElementById('radiusValue').textContent = radius + ' metros';
-        }
-
-        function updateCirclePosition(position) {
-    const totalPoints = polyline.getLatLngs().length;
-    const index = Math.floor(position * (totalPoints - 1));
-    const latlng1 = polyline.getLatLngs()[index];
-    const latlng2 = polyline.getLatLngs()[index + 1];
-    
-    const interpolatedLatLng = L.latLng(
-        latlng1.lat + position * (latlng2.lat - latlng1.lat),
-        latlng1.lng + position * (latlng2.lng - latlng1.lng)
-    );
-    
-    circle.setLatLng(interpolatedLatLng);
-
-    // Nueva parte para actualizar el contenido del popup
-    const popupContent = `Latitud: ${interpolatedLatLng.lat.toFixed(6)}, Longitud: ${interpolatedLatLng.lng.toFixed(6)}`;
-    circle.bindPopup(popupContent).openPopup();
-}
-
-map.on('click', function(event) {
-    const latlng = event.latlng;
-    if (latlng) {
-        const { lat, lng } = latlng;
-        const popupContent = `Latitud: ${lat.toFixed(6)}, Longitud: ${lng.toFixed(6)}`;
-        const popup = L.popup().setLatLng(latlng).setContent(popupContent).openOn(map);
-    }
-});
-
     </script>
-	
-	
-	<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop"
-        style="margin-top: 20px;">
-        ¿Cómo funciona?
-    </button>
-	
-    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
-        aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title fs-5" id="staticBackdropLabel">Instrucciones</h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-
-                    <p>Historial de locaciones registradas, filtrando por fecha y hora. Esto mostrará una tabla con los registros obtenidos de la base de datos.</p>
-                    <hr>
-                    <h2 class="fs-5">Navegación</h2>
-                    <p>Selecciona fecha y hora de registro de consulta. </p>
-                    <div class="container-fluid">
-                        <div class="row">
-                            <div class="col-md-4 ms-auto">
-                                <p>Por ejemplo:
-                            </div>
-                            <img class="col-md-8 ms-auto" src="../public/img/time.png">
-                        </div>
-                        <hr>
-                        <div class="row">
-                            <img class="col-md-6 ms-auto" src="../public/img/trayecto.png">
-                            <div class="col-md-6 ms-auto">
-                                <p>Si se encuentran datos, se trazará una ruta en el mapa de color azul, indicando la
-                                    ruta registrada.
-                            </div>
-							<p></p>
-	
-                            <img class="col-md-6 ms-auto" src="../public/img/maphist.png">
-                            <div class="col-md-6 ms-auto">
-                                <p>Si se clickea un area del mapa, se trazará una ruta en el mapa y podrá seleccionar zonas
-                                    especificas con el puntero.
-
-                        </div>
-                        </div>
-						
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
 </body>
 
 </html>
